@@ -96,11 +96,17 @@ This variable has to be customized before `forge' is loaded."
              magit-mode-hook)
   :type '(list :convert-widget custom-hook-convert-widget))
 
+(defcustom forge-avatar-dir
+  (expand-file-name (concat user-emacs-directory ".cache/forge/avatar/"))
+  "forge avatar directory."
+  :group 'forge
+  :type 'directory)
+
 (defvar-local forge-display-in-status-buffer t
   "Whether to display topics in the current Magit status buffer.")
 (put 'forge-display-in-status-buffer 'permanent-local t)
 
-(defvar forge-format-avatar-function nil
+(defvar forge-format-avatar-function 'forge-get-user-avatar
   "Function used to insert avatars in certain locations.
 This is experimental and intended for users who wish to
 implement such a function themselves.  See #447.")
@@ -179,6 +185,32 @@ implement such a function themselves.  See #447.")
                   number-or-id)))
     'utf-8)
    t))
+
+;;; Avatar
+(defun forge-get-user-avatar (name &optional force-reload)
+  "Retrieve avatar based on github user NAME.
+Cached version is returned if it exists unless FORCE-RELOAD is t."
+  ;; create the forge-avatar-dir if not exists
+  (unless (file-exists-p forge-avatar-dir)
+    (make-directory forge-avatar-dir t))
+  (let* ((filename (expand-file-name (format "%s.png" name) forge-avatar-dir))
+         (buffer (if (or force-reload (not (file-exists-p filename)))
+                     (let* ((user_url (format "https://api.github.com/users/%s" name))
+                            (id (alist-get 'id (with-current-buffer (url-retrieve-synchronously user_url)
+                                                 (goto-char (point-min))
+                                                 (search-forward "\n\n")
+                                                 (json-read))))
+                            (url (format "https://avatars.githubusercontent.com/u/%s" id)))
+                       (with-current-buffer (url-retrieve-synchronously url)
+                         (goto-char (point-min))
+                         (search-forward "\n\n")
+                         (write-region (point) (point-max) filename)
+                         (current-buffer)) )
+                   (with-current-buffer (generate-new-buffer " *temp*")
+                     (insert-file-contents filename)
+                     (current-buffer)))))
+    (propertize "avatar" 'display
+                (create-image filename nil nil :width 25 :height nil :margin '(0 . 0) :ascent 'center))))
 
 ;;; Query
 
