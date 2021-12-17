@@ -209,8 +209,8 @@ Cached version is returned if it exists unless FORCE-RELOAD is t."
                    (with-current-buffer (generate-new-buffer " *temp*")
                      (insert-file-contents filename)
                      (current-buffer)))))
-    (propertize "avatar" 'display
-                (create-image filename nil nil :width 25 :height nil :margin '(0 . 0) :ascent 'center))))
+    (concat (propertize "avatar" 'display
+                (create-image filename nil nil :width 25 :height nil :margin '(0 . 0) :ascent 'center)) " ")))
 
 ;;; Query
 
